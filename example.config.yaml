@@ -1,0 +1,10 @@
+# absolute path to dataset directory
+path: 
+
+# relative paths
+train: images/train
+val: images/val
+
+# amount of classes
+nc: class_amount
+names: ['class_name'] # classes names

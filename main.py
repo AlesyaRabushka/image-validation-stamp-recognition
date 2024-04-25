@@ -1,6 +1,9 @@
 import cv2
 import copy
 from rectangles import *
+import random
+
+
 
 # получение маски изображения
 def get_image_mask(img, threshold = -1):
@@ -105,6 +108,67 @@ def stamp_recognition(img_path):
     get_stamp_contour(img, mask)
 
 
+from ultralytics import YOLO
+
+
+
+def get_class(id):
+    if id == 0:
+        return 'dog'
 
 if __name__ == '__main__':
-    stamp_recognition('/home/aleksa/UNIVER/image-validation-stamp-recognition/img/doc.jpg')
+    img_path = 'data/images/val/n02085620_1502.jpg'
+
+    model = YOLO('/home/aleksa/UNIVER/image-validation-stamp-recognition/runs/detect/train24/weights/best.pt')
+    
+    results = model.predict(source=img_path)
+
+    colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
+
+    img = cv2.imread(img_path)
+
+    # проходим по результатам распознавания
+    for result in results:
+        # определяем все рамки, в которых находятся распознанные объекты
+        boxes = result.boxes.cpu().numpy()
+
+        # список координат верхнего левого угла каждой рамки
+        coordinates_list = boxes.xyxy
+
+        # список вероятностей правильного распознавания сообтветствующих рамок
+        confidences_list = boxes.conf
+
+        # список идентификаторов классов
+        classes_list = boxes.cls
+
+    for result_id in range(0, len(confidences_list)):
+
+        # отметаем все "объекты" с низким уроовнем уверенности
+        if confidences_list[result_id] >= 0.5:
+
+            # получаем имя класса по его идентификатору
+            result_class_name = get_class(classes_list[result_id])
+
+            # получаем показатель степени уверенности в верном распознавании объекта
+            result_conf = str(confidences_list[result_id])
+
+            # получаем координаты рамки
+            result_coords = coordinates_list[result_id]
+
+            x = int(result_coords[0])
+            y = int(result_coords[1])
+            w = int(result_coords[2])
+            h = int(result_coords[3])
+
+            # рандомно определяем цвет рамки
+            color = colors[random.randint(1,100) % len(colors)]
+
+            # отображаем рамку на изображении
+            cv2.rectangle(img, (x,y), (w,h), (color), 3)
+
+            # отображаем название класса и степень уверенности над рамкой объекта на итоговом изображении
+            cv2.putText(img, f'{result_class_name}, {result_conf}%', (x, y+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1, cv2.LINE_AA)
+            
+    # сохраняем изменения в итоговое изображение
+    cv2.imwrite('new_img.png', img)
+    
